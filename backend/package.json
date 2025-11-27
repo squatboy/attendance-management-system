@@ -1,0 +1,27 @@
+{
+    "name": "attendance-backend",
+    "version": "1.0.0",
+    "description": "학교 출석 관리 시스템 백엔드",
+    "main": "src/app.js",
+    "scripts": {
+        "start": "node src/app.js",
+        "dev": "nodemon src/app.js",
+        "db:init": "node src/scripts/initDb.js",
+        "db:seed": "node src/scripts/seedDb.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "mysql2": "^3.6.5",
+        "bcryptjs": "^2.4.3",
+        "jsonwebtoken": "^9.0.2",
+        "cookie-parser": "^1.4.6",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "multer": "^1.4.5-lts.1",
+        "uuid": "^9.0.1",
+        "express-validator": "^7.0.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    }
+}

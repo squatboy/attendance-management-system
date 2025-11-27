@@ -1,0 +1,97 @@
+
+# 웹서버프로그래밍 기말 프로젝트
+
+# 학교 출석 프로그램 만들기
+
+## 1. 사용자 역할 & 권한
+   관리자(Admin): 학과/학기/과목의 개설/수정/삭제, 사용자 등록/수정/권한 관리, 시스템 설정, 리포트(시스템 상태, 오류) 생성
+   담당교원(Instructor): 강의 일정/출석 방식 설정(2가지 이상), 출석 열기/출석 마감, 담당 수업에 대한 출석 현황 확인, 공결 승인/반려, 수업 알림 작성(전체), 메시지 작성(담당 수업 수강생 개인), 수업 공강을 위한 수강생 찬반 투표 생성
+   수강생(Student): 출석 체크, 출석 현황 확인, 공결 신청/증빙 파일(이미지) 업로드, 메시지 작성(수강 수업 담당교원에게)
+
+## 2. 핵심 기능(도메인) [60]
+   ### A. 강의/수업 관리(2025년 2학기 소속학과 기준)
+   학년/학기/주차 일정 생성(반복 규칙, 공휴일/보강일 예외 처리)
+   주차별 출석 방법 설정(회차마다 다르게 선택 가능):
+   전자출결, 인증번호 입력(교원이 생성하여 공유), 호명 등
+   출석 상태 정의 커스터마이즈: 미정(0)/출석(1)/지각(2)/결석(3)/공결(4) (DB에는 코드로 기록)
+
+### B. 출석 진행
+대시보드에서 현재 (출석 체크 확인[교원,수강생])
+로그인 편의를 위한 쿠키 활용(새로고침 해도 로그인 유지)
+
+### C. 공결/사유 결재(워크플로)
+학생: 수업별 공결 신청(사유 기록, 증빙파일 업로드(이미지, 워드)
+교원: 최종 승인/반려(사유 UI 템플릿, 코멘트)
+
+### D. 정정/이의제기
+학생: 출결 이의신청(메시지)
+교원: 메시지 검토 후 정정(모든 변경은 Admin 추적 로그에 기록)
+
+### E. 알림/커뮤니케이션
+푸시 알림:
+
+1. 출석 오픈/마감 알림, 공결 결과 확인 요청, 이의 결과 확인 요청
+2. 강의 공지(교원이 수업에 공지글을 작성하는 경우 수강생 전체 알림)
+3. 수업 공강 투표 알림
+4. 2회 이상 결석한 강의에 대해서는 결석이 확인되는 시점에 수강생에게 알림 생성 (2회 경고 문구/3회 위험 문구)
+
+### F. 감사/보안/개인정보
+관리자는 모든 민감 이벤트(출석 변경, 승인, 정책변경 등) 감사로그
+
+## 3. 데이터 모델(예시) [20] – DB 활용
+   User(id, role, name, email, …)
+
+   Course(id, title, section, instructor_id, semester_id, …)
+
+   ClassSession(id, course_id, start_at, end_at, room, …)
+
+   Enrollment(user_id, course_id, role, …) ※ 수강신청은 외부·엑셀로 주입 가능
+
+   Attendance(session_id, student_id, status, checked_at, …)
+
+   ExcuseRequest(id, session_id, student_id, reason_code, files[], …)
+   
+   …
+
+## 4. API(예시) [10]
+   인증: 
+   POST /auth/login, POST /auth/refresh, POST /auth/logout
+   
+   강의/세션:
+   GET /courses, GET /courses/{id}
+   GET /courses/{id}/sessions, POST /courses/{id}/sessions
+   POST /sessions/{id}/open|pause|close
+   
+   학생 체크:
+   POST /sessions/{id}/attend
+   
+   대시보드:
+   GET /sessions/{id}/attendance/summary
+   
+   정정:
+   PATCH /attendance/{id}
+   
+   공결/이의:
+   POST /sessions/{id}/excuses, GET /excuses?status=pending,
+   PATCH /excuses/{id}
+   POST /attendance/{id}/appeals,
+   PATCH /appeals/{id}
+   
+   정책/점수:
+   GET/PUT /courses/{id}/policy,
+   GET /courses/{id}/score/attendance
+   
+   리포트/내보내기:
+   GET /reports/attendance?course_id=…&week=…
+   
+   파일 업로드:
+   POST /files (증빙, 제한 MIME/크기)
+   
+   감사로그:
+   GET /audits?target_type=Attendance&target_id=…
+
+## 5. 보고서 & 지표 [10]
+   과목/주차 출석률, 지각→결석 전환 건수, 공결 승인율
+   위험군(누적 결석 상위, 연속 지각)
+
+---
