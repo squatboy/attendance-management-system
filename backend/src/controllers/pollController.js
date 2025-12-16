@@ -166,6 +166,28 @@ exports.createPoll = async (req, res) => {
                 );
             }
 
+            // 강의 정보 조회
+            const [courses] = await connection.execute('SELECT title FROM courses WHERE id = ?', [courseId]);
+            const courseTitle = courses[0]?.title || '강의';
+
+            // 수강생들에게 알림 전송
+            const [students] = await connection.execute(
+                'SELECT student_id FROM enrollments WHERE course_id = ?',
+                [courseId]
+            );
+
+            for (const student of students) {
+                await connection.execute(
+                    `INSERT INTO notifications (user_id, type, title, message, related_type, related_id)
+                     VALUES (?, 'poll_created', '새 투표가 생성되었습니다', ?, 'poll', ?)`,
+                    [
+                        student.student_id,
+                        `[${courseTitle}] ${title}`,
+                        pollId
+                    ]
+                );
+            }
+
             await connection.commit();
 
             res.status(201).json({
