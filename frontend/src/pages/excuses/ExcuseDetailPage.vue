@@ -52,9 +52,8 @@
               <a 
                 v-for="att in excuse.attachments" 
                 :key="att.id"
-                :href="`/uploads/${att.file_name}`"
-                target="_blank"
-                class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                :href="`/api/excuses/attachments/${att.id}/download`"
+                class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
               >
                 <i class="fa-solid fa-file text-gray-400"></i>
                 <span class="text-sm">{{ att.original_name }}</span>

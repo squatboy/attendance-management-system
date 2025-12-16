@@ -13,6 +13,9 @@ router.get('/', excuseController.getExcuses);
 // 공결 신청 상세 조회
 router.get('/:id', excuseController.getExcuse);
 
+// 첨부파일 다운로드
+router.get('/attachments/:attachmentId/download', excuseController.downloadAttachment);
+
 // 공결 신청 생성 (학생만)
 router.post('/', isStudent, upload.array('attachments', 5), excuseController.createExcuse);
 

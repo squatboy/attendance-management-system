@@ -249,6 +249,47 @@ exports.processExcuse = async (req, res) => {
     }
 };
 
+// 첨부파일 다운로드
+exports.downloadAttachment = async (req, res) => {
+    try {
+        const { attachmentId } = req.params;
+
+        const [attachments] = await db.execute(
+            'SELECT * FROM attachments WHERE id = ?',
+            [attachmentId]
+        );
+
+        if (attachments.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '파일을 찾을 수 없습니다.'
+            });
+        }
+
+        const attachment = attachments[0];
+
+        // 파일이 실제로 존재하는지 확인
+        try {
+            await fs.access(attachment.file_path);
+        } catch {
+            return res.status(404).json({
+                success: false,
+                message: '파일이 존재하지 않습니다.'
+            });
+        }
+
+        // 파일 다운로드
+        res.download(attachment.file_path, attachment.original_name);
+
+    } catch (error) {
+        console.error('파일 다운로드 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '파일 다운로드에 실패했습니다.'
+        });
+    }
+};
+
 // 공결 신청 삭제
 exports.deleteExcuse = async (req, res) => {
     try {
