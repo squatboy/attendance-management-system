@@ -5,8 +5,8 @@ exports.getNotifications = async (req, res) => {
     try {
         const userId = req.user.id;
         const { unreadOnly, page = 1, limit = 20 } = req.query;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 20;
         const offset = (pageNum - 1) * limitNum;
 
         let query = 'SELECT * FROM notifications WHERE user_id = ?';
@@ -16,8 +16,7 @@ exports.getNotifications = async (req, res) => {
             query += ' AND is_read = FALSE';
         }
 
-        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-        params.push(limitNum, offset);
+        query += ` ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
         const [notifications] = await db.execute(query, params);
 

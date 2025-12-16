@@ -108,15 +108,46 @@ exports.updateSemester = async (req, res) => {
         const { id } = req.params;
         const { year, term, startDate, endDate, isCurrent } = req.body;
 
-        // 현재 학기로 설정하는 경우 기존 현재 학기 해제
-        if (isCurrent) {
-            await db.execute('UPDATE semesters SET is_current = FALSE WHERE is_current = TRUE');
+        // 동적으로 업데이트할 필드 구성
+        const updates = [];
+        const params = [];
+
+        if (year !== undefined) {
+            updates.push('year = ?');
+            params.push(year);
+        }
+        if (term !== undefined) {
+            updates.push('term = ?');
+            params.push(term);
+        }
+        if (startDate !== undefined) {
+            updates.push('start_date = ?');
+            params.push(startDate);
+        }
+        if (endDate !== undefined) {
+            updates.push('end_date = ?');
+            params.push(endDate);
+        }
+        if (isCurrent !== undefined) {
+            // 현재 학기로 설정하는 경우 기존 현재 학기 해제
+            if (isCurrent) {
+                await db.execute('UPDATE semesters SET is_current = FALSE WHERE is_current = TRUE');
+            }
+            updates.push('is_current = ?');
+            params.push(isCurrent || false);
         }
 
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '수정할 정보가 없습니다.'
+            });
+        }
+
+        params.push(id);
         await db.execute(
-            `UPDATE semesters SET year = ?, term = ?, start_date = ?, end_date = ?, is_current = ?
-       WHERE id = ?`,
-            [year, term, startDate, endDate, isCurrent || false, id]
+            `UPDATE semesters SET ${updates.join(', ')} WHERE id = ?`,
+            params
         );
 
         res.json({

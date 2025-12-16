@@ -186,9 +186,38 @@ exports.updateProfile = async (req, res) => {
     try {
         const { name, email, phone, department } = req.body;
 
+        // 동적으로 업데이트할 필드 구성
+        const updates = [];
+        const params = [];
+
+        if (name !== undefined) {
+            updates.push('name = ?');
+            params.push(name);
+        }
+        if (email !== undefined) {
+            updates.push('email = ?');
+            params.push(email || null);
+        }
+        if (phone !== undefined) {
+            updates.push('phone = ?');
+            params.push(phone || null);
+        }
+        if (department !== undefined) {
+            updates.push('department = ?');
+            params.push(department || null);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '수정할 정보가 없습니다.'
+            });
+        }
+
+        params.push(req.user.id);
         await db.execute(
-            'UPDATE users SET name = ?, email = ?, phone = ?, department = ? WHERE id = ?',
-            [name, email || null, phone || null, department || null, req.user.id]
+            `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+            params
         );
 
         res.json({

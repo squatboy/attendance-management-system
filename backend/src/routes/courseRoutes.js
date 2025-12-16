@@ -9,11 +9,14 @@ router.use(authenticate);
 // 강의 목록 조회
 router.get('/', courseController.getCourses);
 
-// 강의 상세 조회
-router.get('/:id', courseController.getCourse);
+// 관리자용 강의 목록 조회 (/:id보다 먼저 정의해야 함)
+router.get('/admin', isAdmin, courseController.getCourses);
 
 // 강의 생성 (관리자만)
 router.post('/', isAdmin, courseController.createCourse);
+
+// 강의 상세 조회
+router.get('/:id', courseController.getCourse);
 
 // 강의 수정 (관리자만)
 router.put('/:id', isAdmin, courseController.updateCourse);

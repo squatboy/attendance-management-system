@@ -149,7 +149,19 @@ exports.getCourse = async (req, res) => {
 // 강의 생성
 exports.createCourse = async (req, res) => {
     try {
-        const { semesterId, title, section, grade, department, instructorIds, schedules } = req.body;
+        // 프론트엔드에서 보낸 데이터 (code, title, instructorId, semesterId, room, credits, description)
+        // 또는 기존 형식 (semesterId, title, section, grade, department, instructorIds, schedules) 모두 지원
+        const {
+            semesterId,
+            title,
+            section,
+            grade,
+            department,
+            instructorIds,
+            instructorId,  // 프론트엔드에서 보내는 단일 instructorId
+            schedules,
+            room  // 프론트엔드에서 보내는 room
+        } = req.body;
 
         const connection = await db.getConnection();
         await connection.beginTransaction();
@@ -159,18 +171,25 @@ exports.createCourse = async (req, res) => {
             const [result] = await connection.execute(
                 `INSERT INTO courses (semester_id, title, section, grade, department)
          VALUES (?, ?, ?, ?, ?)`,
-                [semesterId, title, section || null, grade, department || '소프트웨어학과']
+                [
+                    semesterId,
+                    title,
+                    section || null,
+                    grade || 1,  // 기본값 1학년
+                    department || '소프트웨어학과'
+                ]
             );
 
             const courseId = result.insertId;
 
-            // 담당 교원 연결
-            if (instructorIds && instructorIds.length > 0) {
-                for (let i = 0; i < instructorIds.length; i++) {
+            // 담당 교원 연결 (배열 또는 단일 ID 모두 지원)
+            const instructors = instructorIds || (instructorId ? [instructorId] : []);
+            if (instructors.length > 0) {
+                for (let i = 0; i < instructors.length; i++) {
                     await connection.execute(
                         `INSERT INTO course_instructors (course_id, instructor_id, is_primary)
              VALUES (?, ?, ?)`,
-                        [courseId, instructorIds[i], i === 0]
+                        [courseId, instructors[i], i === 0]
                     );
                 }
             }
@@ -184,6 +203,9 @@ exports.createCourse = async (req, res) => {
                         [courseId, schedule.dayOfWeek, schedule.period, schedule.room || null]
                     );
                 }
+            } else if (room) {
+                // schedules가 없고 room만 있는 경우 (프론트엔드 형식)
+                // 기본 시간표 생성하지 않고 넘어감 (추후 시간표는 별도 관리)
             }
 
             await connection.commit();
@@ -214,26 +236,50 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, section, grade, department, instructorIds, schedules } = req.body;
+        const { title, section, grade, department, instructorIds, instructorId, schedules } = req.body;
 
         const connection = await db.getConnection();
         await connection.beginTransaction();
 
         try {
-            // 강의 수정
-            await connection.execute(
-                `UPDATE courses SET title = ?, section = ?, grade = ?, department = ? WHERE id = ?`,
-                [title, section, grade, department, id]
-            );
+            // 동적으로 업데이트할 필드 구성
+            const updates = [];
+            const params = [];
 
-            // 기존 교원 연결 삭제 후 재생성
-            if (instructorIds) {
+            if (title !== undefined) {
+                updates.push('title = ?');
+                params.push(title);
+            }
+            if (section !== undefined) {
+                updates.push('section = ?');
+                params.push(section || null);
+            }
+            if (grade !== undefined) {
+                updates.push('grade = ?');
+                params.push(grade || 1);
+            }
+            if (department !== undefined) {
+                updates.push('department = ?');
+                params.push(department || '소프트웨어학과');
+            }
+
+            if (updates.length > 0) {
+                params.push(id);
+                await connection.execute(
+                    `UPDATE courses SET ${updates.join(', ')} WHERE id = ?`,
+                    params
+                );
+            }
+
+            // 기존 교원 연결 삭제 후 재생성 (배열 또는 단일 ID 모두 지원)
+            const instructors = instructorIds || (instructorId ? [instructorId] : null);
+            if (instructors) {
                 await connection.execute('DELETE FROM course_instructors WHERE course_id = ?', [id]);
-                for (let i = 0; i < instructorIds.length; i++) {
+                for (let i = 0; i < instructors.length; i++) {
                     await connection.execute(
                         `INSERT INTO course_instructors (course_id, instructor_id, is_primary)
              VALUES (?, ?, ?)`,
-                        [id, instructorIds[i], i === 0]
+                        [id, instructors[i], i === 0]
                     );
                 }
             }
