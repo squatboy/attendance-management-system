@@ -3,10 +3,22 @@ const jwtConfig = require('../config/jwt');
 
 // JWT 토큰 검증 미들웨어
 const authenticateToken = (req, res, next) => {
-    // 쿠키에서 토큰 가져오기
-    const token = req.cookies?.token;
+    // 1. 쿠키에서 토큰 가져오기
+    let token = req.cookies?.token;
+    console.log(`[Auth] Checking cookies for token: ${token ? 'found' : 'not found'}`);
+
+    // 2. 쿠키에 없으면 Authorization 헤더에서 가져오기
+    if (!token && req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        console.log(`[Auth] Checking Authorization header: ${authHeader.substring(0, 30)}...`);
+        if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.slice(7);
+            console.log(`[Auth] Token extracted from header`);
+        }
+    }
 
     if (!token) {
+        console.log(`[Auth] ✗ No token found`);
         return res.status(401).json({
             success: false,
             message: '인증이 필요합니다.'
@@ -15,9 +27,11 @@ const authenticateToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, jwtConfig.secret);
+        console.log(`[Auth] ✓ Token verified, user id: ${decoded.id}`);
         req.user = decoded;
         next();
     } catch (error) {
+        console.log(`[Auth] ✗ Token verification failed: ${error.message}`);
         return res.status(403).json({
             success: false,
             message: '유효하지 않은 토큰입니다.'

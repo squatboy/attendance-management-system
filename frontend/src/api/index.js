@@ -10,9 +10,13 @@ const api = axios.create({
     }
 })
 
-// 요청 인터셉터
+// 요청 인터셉터 - Authorization 헤더 자동 추가
 api.interceptors.request.use(
     (config) => {
+        const token = localStorage.getItem('token')
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`
+        }
         return config
     },
     (error) => {
@@ -29,8 +33,9 @@ api.interceptors.response.use(
         if (error.response) {
             const { status, data } = error.response
 
-            // 인증 오류
+            // 인증 오류 - 토큰 제거 후 로그인 페이지로
             if (status === 401) {
+                localStorage.removeItem('token')
                 router.push({ name: 'login' })
             }
 

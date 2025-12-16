@@ -13,6 +13,7 @@ const routes = [
     {
         path: '/login',
         component: AuthLayout,
+        meta: { requiresAuth: false },
         children: [
             {
                 path: '',

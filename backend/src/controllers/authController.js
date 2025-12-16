@@ -52,12 +52,22 @@ exports.login = async (req, res) => {
         );
 
         // 쿠키에 토큰 저장
-        res.cookie('token', token, {
+        const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7일
-        });
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
+            path: '/'
+        };
+
+        // 개발 환경: sameSite 'Lax' 사용
+        // 프로덕션: sameSite 'None'과 secure 사용
+        if (process.env.NODE_ENV === 'production') {
+            cookieOptions.secure = true;
+            cookieOptions.sameSite = 'none';
+        } else {
+            cookieOptions.sameSite = 'lax';
+        }
+
+        res.cookie('token', token, cookieOptions);
 
         res.json({
             success: true,

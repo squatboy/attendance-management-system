@@ -29,6 +29,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// 디버깅 미들웨어 - 모든 요청 로깅
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    if (req.headers.authorization) {
+        console.log(`  Authorization: ${req.headers.authorization.substring(0, 20)}...`);
+    }
+    if (req.cookies && req.cookies.token) {
+        console.log(`  Cookie token: ${req.cookies.token.substring(0, 20)}...`);
+    }
+    next();
+});
+
 // 정적 파일 서빙 (업로드 파일)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
