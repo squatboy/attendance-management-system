@@ -6,8 +6,8 @@ const { logAudit } = require('../middlewares/audit');
 exports.getUsers = async (req, res) => {
     try {
         const { role, department, search, page = 1, limit = 20 } = req.query;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 20;
         const offset = (pageNum - 1) * limitNum;
 
         let query = 'SELECT id, student_id, name, email, role, department, grade, created_at FROM users WHERE 1=1';
@@ -36,20 +36,22 @@ exports.getUsers = async (req, res) => {
             countParams.push(`%${search}%`, `%${search}%`);
         }
 
-        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-        params.push(limitNum, offset);
+        // LIMIT과 OFFSET을 쿼리에 직접 삽입 (정수로 확실하게 변환)
+        query += ` ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
         const [users] = await db.execute(query, params);
         const [countResult] = await db.execute(countQuery, countParams);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limitNum);
 
         res.json({
             success: true,
-            data: users,
-            pagination: {
+            data: {
+                users: users,
+                total: total,
+                totalPages: totalPages,
                 page: pageNum,
-                limit: limitNum,
-                total: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limitNum)
+                limit: limitNum
             }
         });
 
@@ -153,22 +155,56 @@ exports.updateUser = async (req, res) => {
             });
         }
 
-        let query = 'UPDATE users SET name = ?, email = ?, role = ?, department = ?, grade = ?';
-        const params = [name, email, role, department, grade];
+        // 동적으로 업데이트할 필드 구성
+        const updates = [];
+        const params = [];
+        const auditData = {};
 
+        if (name !== undefined) {
+            updates.push('name = ?');
+            params.push(name);
+            auditData.name = name;
+        }
+        if (email !== undefined) {
+            updates.push('email = ?');
+            params.push(email || null);
+            auditData.email = email;
+        }
+        if (role !== undefined) {
+            updates.push('role = ?');
+            params.push(role);
+            auditData.role = role;
+        }
+        if (department !== undefined) {
+            updates.push('department = ?');
+            params.push(department || null);
+            auditData.department = department;
+        }
+        if (grade !== undefined) {
+            updates.push('grade = ?');
+            params.push(grade || null);
+            auditData.grade = grade;
+        }
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            query += ', password = ?';
+            updates.push('password = ?');
             params.push(hashedPassword);
         }
 
-        query += ' WHERE id = ?';
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '수정할 정보가 없습니다.'
+            });
+        }
+
+        const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
         params.push(id);
 
         await db.execute(query, params);
 
         // 감사 로그
-        await logAudit(req.user.id, 'UPDATE', 'users', id, existing[0], { name, email, role, department, grade }, req);
+        await logAudit(req.user.id, 'UPDATE', 'users', id, existing[0], auditData, req);
 
         res.json({
             success: true,
