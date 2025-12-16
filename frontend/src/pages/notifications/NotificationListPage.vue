@@ -107,7 +107,7 @@ const fetchNotifications = async () => {
   try {
     const response = await api.get('/notifications')
     if (response.success) {
-      notifications.value = response.data
+      notifications.value = response.data.notifications || []
     }
   } catch (error) {
     console.error('알림 목록 조회 오류:', error)
