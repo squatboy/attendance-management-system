@@ -119,8 +119,23 @@ exports.getPoll = async (req, res) => {
 // 투표 생성
 exports.createPoll = async (req, res) => {
     try {
-        const { courseId, question, options, isAnonymous, allowMultiple, endDate } = req.body;
+        const { courseId, title, description, options, isAnonymous, allowMultiple, endDate } = req.body;
         const creatorId = req.user.id;
+
+        // 유효성 검사
+        if (!courseId) {
+            return res.status(400).json({
+                success: false,
+                message: '강의를 선택하세요.'
+            });
+        }
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: '투표 제목은 필수입니다.'
+            });
+        }
 
         if (!options || options.length < 2) {
             return res.status(400).json({
@@ -137,16 +152,17 @@ exports.createPoll = async (req, res) => {
                 `INSERT INTO polls 
          (course_id, created_by, question, is_anonymous, allow_multiple, end_date, is_active)
          VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
-                [courseId, creatorId, question, isAnonymous || false, allowMultiple || false, endDate || null]
+                [courseId, creatorId, title, isAnonymous || false, allowMultiple || false, endDate || null]
             );
 
             const pollId = result.insertId;
 
-            // 옵션 추가
-            for (let i = 0; i < options.length; i++) {
+            // 옵션 추가 (빈 값 제거)
+            const validOptions = options.filter(o => o && o.trim());
+            for (let i = 0; i < validOptions.length; i++) {
                 await connection.execute(
                     'INSERT INTO poll_options (poll_id, option_text, option_order) VALUES (?, ?, ?)',
-                    [pollId, options[i], i + 1]
+                    [pollId, validOptions[i], i + 1]
                 );
             }
 
