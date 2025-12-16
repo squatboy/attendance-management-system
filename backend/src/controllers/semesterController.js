@@ -54,6 +54,19 @@ exports.createSemester = async (req, res) => {
     try {
         const { year, term, startDate, endDate, isCurrent } = req.body;
 
+        // 중복 확인
+        const [existing] = await db.execute(
+            'SELECT id FROM semesters WHERE year = ? AND term = ?',
+            [year, term]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: '이미 동일한 학기가 존재합니다.'
+            });
+        }
+
         // 현재 학기로 설정하는 경우 기존 현재 학기 해제
         if (isCurrent) {
             await db.execute('UPDATE semesters SET is_current = FALSE WHERE is_current = TRUE');
@@ -73,6 +86,15 @@ exports.createSemester = async (req, res) => {
 
     } catch (error) {
         console.error('학기 생성 오류:', error);
+
+        // 중복 에러 처리
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 동일한 학기가 존재합니다.'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: '서버 오류가 발생했습니다.'
