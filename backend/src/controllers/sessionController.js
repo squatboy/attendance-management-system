@@ -438,28 +438,16 @@ exports.getMyAttendance = async (req, res) => {
         const studentId = req.user.id;
 
         const [attendances] = await db.execute(`
-      SELECT a.*, s.session_date, s.period
+      SELECT a.id, a.session_id, a.status as my_status, s.session_date, s.period
       FROM attendance a
       JOIN attendance_sessions s ON a.session_id = s.id
       WHERE s.course_id = ? AND a.student_id = ?
       ORDER BY s.session_date DESC
     `, [courseId, studentId]);
 
-        // 통계 계산
-        const stats = {
-            total: attendances.length,
-            present: attendances.filter(a => a.status === 'present').length,
-            late: attendances.filter(a => a.status === 'late').length,
-            absent: attendances.filter(a => a.status === 'absent').length,
-            excused: attendances.filter(a => a.status === 'excused').length
-        };
-
         res.json({
             success: true,
-            data: {
-                attendances,
-                stats
-            }
+            data: attendances
         });
 
     } catch (error) {

@@ -125,7 +125,14 @@ const getStatusBadge = (status) => {
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('ko-KR')
+  if (!dateString) return 'Invalid Date'
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return 'Invalid Date'
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 const fetchCourses = async () => {
