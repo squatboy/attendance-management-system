@@ -1,4 +1,6 @@
 const db = require('../models/db');
+const { logAudit } = require('../middlewares/audit');
+const { STATUS_CODES } = require('../utils/attendanceStatus');
 
 // 결석 누적 확인 및 경고 알림 발송
 const checkAbsentWarning = async (sessionId, studentId) => {
@@ -13,13 +15,13 @@ const checkAbsentWarning = async (sessionId, studentId) => {
 
         const courseId = sessions[0].course_id;
 
-        // 해당 강의의 결석 횟수 조회
+        // 해당 강의의 결석 횟수 조회 (status = 3: 결석)
         const [absentCount] = await db.execute(`
             SELECT COUNT(*) as count 
             FROM attendance a
             JOIN attendance_sessions s ON a.session_id = s.id
-            WHERE s.course_id = ? AND a.student_id = ? AND a.status = 'absent'
-        `, [courseId, studentId]);
+            WHERE s.course_id = ? AND a.student_id = ? AND a.status = ?
+        `, [courseId, studentId, STATUS_CODES.ABSENT]);
 
         const count = absentCount[0].count;
 
@@ -62,9 +64,9 @@ exports.getSessions = async (req, res) => {
 
         let query = `
       SELECT s.*, 
-             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 'present') as present_count,
-             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 'late') as late_count,
-             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 'absent') as absent_count
+             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 1) as present_count,
+             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 2) as late_count,
+             (SELECT COUNT(*) FROM attendance WHERE session_id = s.id AND status = 3) as absent_count
       FROM attendance_sessions s
       WHERE s.course_id = ?
     `;
@@ -186,10 +188,26 @@ exports.createSession = async (req, res) => {
             [courseId]
         );
 
+        // 강의 정보 조회
+        const [courses] = await db.execute('SELECT title FROM courses WHERE id = ?', [courseId]);
+        const courseTitle = courses[0]?.title || '강의';
+
         for (const student of students) {
             await db.execute(
-                `INSERT INTO attendance (session_id, student_id, status) VALUES (?, ?, 'absent')`,
-                [sessionId, student.student_id]
+                `INSERT INTO attendance (session_id, student_id, status) VALUES (?, ?, ?)`,
+                [sessionId, student.student_id, STATUS_CODES.ABSENT]
+            );
+
+            // 출석 오픈 알림 전송
+            const attendanceTypeLabel = attendanceType === 'code' ? '코드 입력' : attendanceType === 'rollcall' ? '호명' : '전자출결';
+            await db.execute(
+                `INSERT INTO notifications (user_id, type, title, message, related_type, related_id)
+                 VALUES (?, 'attendance_open', '📢 출석 시작', ?, 'session', ?)`,
+                [
+                    student.student_id,
+                    `[${courseTitle}] ${sessionDate} ${period}교시 출석이 시작되었습니다. (${attendanceTypeLabel})`,
+                    sessionId
+                ]
             );
         }
 
@@ -249,19 +267,52 @@ exports.closeSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
+        // 세션 정보 조회
+        const [sessions] = await db.execute(
+            'SELECT course_id FROM attendance_sessions WHERE id = ?',
+            [sessionId]
+        );
+
+        if (sessions.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '세션을 찾을 수 없습니다.'
+            });
+        }
+
+        const courseId = sessions[0].course_id;
+
         await db.execute(
             'UPDATE attendance_sessions SET status = ?, closed_at = NOW() WHERE id = ?',
             ['closed', sessionId]
         );
 
-        // 결석자들에게 경고 알림 확인
-        const [absentStudents] = await db.execute(
-            `SELECT student_id FROM attendance WHERE session_id = ? AND status = 'absent'`,
+        // 강의 정보 조회
+        const [courses] = await db.execute('SELECT title FROM courses WHERE id = ?', [courseId]);
+        const courseTitle = courses[0]?.title || '강의';
+
+        // 모든 수강생에게 출석 마감 알림 전송
+        const [allStudents] = await db.execute(
+            'SELECT student_id, status FROM attendance WHERE session_id = ?',
             [sessionId]
         );
 
-        for (const student of absentStudents) {
-            await checkAbsentWarning(sessionId, student.student_id);
+        for (const student of allStudents) {
+            // 출석 마감 알림
+            await db.execute(
+                `INSERT INTO notifications (user_id, type, title, message, related_type, related_id)
+                 VALUES (?, 'attendance_closed', '🔔 출석 마감', ?, 'session', ?)`,
+                [
+                    student.student_id,
+                    `[${courseTitle}] 출석이 마감되었습니다. 출석 상태를 확인하세요.`,
+                    sessionId
+                ]
+            );
+
+            // 결석자들에게 경고 알림 확인 (status = 3: 결석)
+            if (student.status === STATUS_CODES.ABSENT) {
+                await checkAbsentWarning(sessionId, student.student_id);
+            }
         }
 
         res.json({
@@ -336,18 +387,31 @@ exports.checkIn = async (req, res) => {
             [sessionId, studentId]
         );
 
-        if (existingAttendance.length > 0 && existingAttendance[0].status !== 'absent') {
+        if (existingAttendance.length > 0 && existingAttendance[0].status !== STATUS_CODES.ABSENT) {
             return res.status(400).json({
                 success: false,
                 message: '이미 출석 처리된 학생입니다.'
             });
         }
 
-        // 출석 처리 (지각 여부 판단은 별도 로직 필요)
+        // 출석 처리 (지각 여부 판단은 별도 로직 필요) - status = 1: 출석
         await db.execute(
-            `UPDATE attendance SET status = 'present', checked_at = NOW() WHERE session_id = ? AND student_id = ?`,
-            [sessionId, studentId]
+            `UPDATE attendance SET status = ?, checked_at = NOW() WHERE session_id = ? AND student_id = ?`,
+            [STATUS_CODES.PRESENT, sessionId, studentId]
         );
+
+        // 감사 로그 기록
+        if (req.user) {
+            await logAudit(
+                req.user.id,
+                'CHECK_IN',
+                'attendance',
+                `${sessionId}_${studentId}`,
+                { status: existingAttendance[0]?.status || STATUS_CODES.ABSENT },
+                { status: STATUS_CODES.PRESENT, code },
+                req
+            );
+        }
 
         res.json({
             success: true,
@@ -370,13 +434,32 @@ exports.rollCall = async (req, res) => {
         const { attendances } = req.body; // [{studentId, status}]
 
         for (const att of attendances) {
+            // 기존 상태 조회
+            const [oldAttendance] = await db.execute(
+                'SELECT status FROM attendance WHERE session_id = ? AND student_id = ?',
+                [sessionId, att.studentId]
+            );
+
             await db.execute(
                 `UPDATE attendance SET status = ?, checked_at = NOW() WHERE session_id = ? AND student_id = ?`,
                 [att.status, sessionId, att.studentId]
             );
 
-            // 결석인 경우 경고 알림 확인
-            if (att.status === 'absent') {
+            // 감사 로그 기록
+            if (req.user) {
+                await logAudit(
+                    req.user.id,
+                    'ROLLCALL',
+                    'attendance',
+                    `${sessionId}_${att.studentId}`,
+                    { status: oldAttendance[0]?.status },
+                    { status: att.status },
+                    req
+                );
+            }
+
+            // 결석인 경우 경고 알림 확인 (status = 3: 결석)
+            if (att.status === STATUS_CODES.ABSENT) {
                 await checkAbsentWarning(sessionId, att.studentId);
             }
         }
@@ -412,8 +495,21 @@ exports.updateAttendance = async (req, res) => {
             [status, note || null, sessionId, studentId]
         );
 
-        // 결석으로 변경된 경우, 누적 결석 확인 및 알림
-        if (status === 'absent') {
+        // 감사 로그 기록
+        if (req.user) {
+            await logAudit(
+                req.user.id,
+                'UPDATE_ATTENDANCE',
+                'attendance',
+                `${sessionId}_${studentId}`,
+                { status: oldAttendance[0]?.status },
+                { status, note },
+                req
+            );
+        }
+
+        // 결석으로 변경된 경우, 누적 결석 확인 및 알림 (status = 3: 결석)
+        if (status === STATUS_CODES.ABSENT) {
             await checkAbsentWarning(sessionId, studentId);
         }
 

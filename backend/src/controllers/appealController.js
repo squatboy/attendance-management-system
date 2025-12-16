@@ -1,4 +1,5 @@
 const db = require('../models/db');
+const { STATUS_CODES } = require('../utils/attendanceStatus');
 
 // 이의 신청 목록 조회
 exports.getAppeals = async (req, res) => {

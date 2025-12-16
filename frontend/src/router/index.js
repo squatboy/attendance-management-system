@@ -130,23 +130,6 @@ const routes = [
                 component: () => import('@/pages/polls/PollDetailPage.vue')
             },
 
-            // 쪽지
-            {
-                path: 'messages',
-                name: 'messages',
-                component: () => import('@/pages/messages/MessageListPage.vue')
-            },
-            {
-                path: 'messages/new',
-                name: 'message-new',
-                component: () => import('@/pages/messages/MessageFormPage.vue')
-            },
-            {
-                path: 'messages/:id',
-                name: 'message-detail',
-                component: () => import('@/pages/messages/MessageDetailPage.vue')
-            },
-
             // 알림
             {
                 path: 'notifications',

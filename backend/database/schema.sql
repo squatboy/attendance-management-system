@@ -114,11 +114,12 @@ CREATE TABLE attendance_sessions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 9. 출석 기록 테이블
+-- 출석 상태: 0=미정(pending), 1=출석(present), 2=지각(late), 3=결석(absent), 4=공결(excused)
 CREATE TABLE attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     student_id INT NOT NULL,
-    status ENUM('present', 'late', 'absent', 'excused') DEFAULT 'absent',
+    status TINYINT NOT NULL DEFAULT 3 COMMENT '출석 상태 (0:미정, 1:출석, 2:지각, 3:결석, 4:공결)',
     checked_at TIMESTAMP NULL COMMENT '출석 체크 시간',
     note VARCHAR(255) COMMENT '비고',
     FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON DELETE CASCADE,
@@ -163,12 +164,13 @@ CREATE TABLE attachments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 12. 이의 신청 테이블
+-- 출석 상태: 0=미정(pending), 1=출석(present), 2=지각(late), 3=결석(absent), 4=공결(excused)
 CREATE TABLE appeals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     student_id INT NOT NULL,
-    original_status ENUM('present', 'late', 'absent', 'excused') NOT NULL,
-    requested_status ENUM('present', 'late', 'excused') NOT NULL,
+    original_status TINYINT NOT NULL COMMENT '원래 출석 상태 코드',
+    requested_status TINYINT NOT NULL COMMENT '요청 출석 상태 코드 (0,1,2,4만 가능)',
     reason TEXT NOT NULL,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     reject_reason TEXT,
@@ -232,23 +234,7 @@ CREATE TABLE poll_votes (
     UNIQUE KEY unique_vote (option_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 17. 쪽지 테이블
-CREATE TABLE messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    sender_id INT NOT NULL,
-    receiver_id INT NOT NULL,
-    content TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    sender_deleted BOOLEAN DEFAULT FALSE,
-    receiver_deleted BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_receiver (receiver_id, is_read),
-    INDEX idx_sender (sender_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 18. 감사 로그 테이블
+-- 17. 감사 로그 테이블
 CREATE TABLE audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
@@ -264,7 +250,8 @@ CREATE TABLE audit_logs (
     INDEX idx_entity (entity_type, entity_id),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
--- 19. 시스템 설정 테이블
+
+-- 18. 시스템 설정 테이블
 CREATE TABLE settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     setting_key VARCHAR(100) UNIQUE NOT NULL COMMENT '설정 키',

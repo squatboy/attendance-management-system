@@ -1,6 +1,7 @@
 const db = require('../models/db');
 const fs = require('fs').promises;
 const path = require('path');
+const { STATUS_CODES } = require('../utils/attendanceStatus');
 
 // 공결 신청 목록 조회
 exports.getExcuses = async (req, res) => {
@@ -207,11 +208,11 @@ exports.processExcuse = async (req, res) => {
 
             const excuse = excuses[0];
 
-            // 승인 시 출석 상태를 공결로 변경
+            // 승인 시 출석 상태를 공결(4)로 변경
             if (status === 'approved' && excuse.session_id) {
                 await connection.execute(
-                    `UPDATE attendance SET status = 'excused' WHERE session_id = ? AND student_id = ?`,
-                    [excuse.session_id, excuse.student_id]
+                    `UPDATE attendance SET status = ? WHERE session_id = ? AND student_id = ?`,
+                    [STATUS_CODES.EXCUSED, excuse.session_id, excuse.student_id]
                 );
             }
 

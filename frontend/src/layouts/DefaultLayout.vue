@@ -72,17 +72,6 @@
               </router-link>
             </li>
             
-            <li>
-              <router-link 
-                to="/messages" 
-                class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                :class="{ 'bg-primary-50 text-primary-600': $route.path.startsWith('/messages') }"
-              >
-                <i class="fa-solid fa-envelope w-5"></i>
-                <span>쪽지</span>
-              </router-link>
-            </li>
-            
             <!-- 관리자 메뉴 -->
             <template v-if="authStore.isAdmin">
               <li class="pt-4 mt-4 border-t border-gray-200">
