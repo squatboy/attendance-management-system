@@ -5,7 +5,9 @@ exports.getReceivedMessages = async (req, res) => {
     try {
         const userId = req.user.id;
         const { page = 1, limit = 20 } = req.query;
-        const offset = (page - 1) * limit;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const offset = (pageNum - 1) * limitNum;
 
         const [messages] = await db.execute(`
       SELECT m.*, u.name as sender_name, u.student_id as sender_student_id
@@ -14,7 +16,7 @@ exports.getReceivedMessages = async (req, res) => {
       WHERE m.receiver_id = ? AND m.receiver_deleted = FALSE
       ORDER BY m.created_at DESC
       LIMIT ? OFFSET ?
-    `, [userId, parseInt(limit), offset]);
+    `, [userId, limitNum, offset]);
 
         const [countResult] = await db.execute(
             'SELECT COUNT(*) as total FROM messages WHERE receiver_id = ? AND receiver_deleted = FALSE',
@@ -48,7 +50,9 @@ exports.getSentMessages = async (req, res) => {
     try {
         const userId = req.user.id;
         const { page = 1, limit = 20 } = req.query;
-        const offset = (page - 1) * limit;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const offset = (pageNum - 1) * limitNum;
 
         const [messages] = await db.execute(`
       SELECT m.*, u.name as receiver_name, u.student_id as receiver_student_id
@@ -57,7 +61,7 @@ exports.getSentMessages = async (req, res) => {
       WHERE m.sender_id = ? AND m.sender_deleted = FALSE
       ORDER BY m.created_at DESC
       LIMIT ? OFFSET ?
-    `, [userId, parseInt(limit), offset]);
+    `, [userId, limitNum, offset]);
 
         const [countResult] = await db.execute(
             'SELECT COUNT(*) as total FROM messages WHERE sender_id = ? AND sender_deleted = FALSE',

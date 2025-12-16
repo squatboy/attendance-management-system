@@ -6,7 +6,9 @@ const { logAudit } = require('../middlewares/audit');
 exports.getUsers = async (req, res) => {
     try {
         const { role, department, search, page = 1, limit = 20 } = req.query;
-        const offset = (page - 1) * limit;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const offset = (pageNum - 1) * limitNum;
 
         let query = 'SELECT id, student_id, name, email, role, department, grade, created_at FROM users WHERE 1=1';
         let countQuery = 'SELECT COUNT(*) as total FROM users WHERE 1=1';
@@ -35,7 +37,7 @@ exports.getUsers = async (req, res) => {
         }
 
         query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-        params.push(parseInt(limit), offset);
+        params.push(limitNum, offset);
 
         const [users] = await db.execute(query, params);
         const [countResult] = await db.execute(countQuery, countParams);
@@ -44,10 +46,10 @@ exports.getUsers = async (req, res) => {
             success: true,
             data: users,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit)
+                totalPages: Math.ceil(countResult[0].total / limitNum)
             }
         });
 

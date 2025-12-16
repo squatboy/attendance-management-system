@@ -7,7 +7,7 @@ const logAudit = async (userId, action, targetType, targetId, oldValue = null, n
         const userAgent = req ? (req.headers['user-agent'] || null) : null;
 
         await db.execute(
-            `INSERT INTO audit_logs (user_id, action, target_type, target_id, old_value, new_value, ip_address, user_agent)
+            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, old_values, new_values, ip_address, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 userId,
