@@ -16,6 +16,7 @@ const pollRoutes = require('./routes/pollRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const semesterRoutes = require('./routes/semesterRoutes');
 const auditRoutes = require('./routes/auditRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/polls', pollRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/audit-logs', auditRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 헬스 체크
 app.get('/api/health', (req, res) => {

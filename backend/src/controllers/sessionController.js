@@ -330,6 +330,19 @@ exports.checkIn = async (req, res) => {
             });
         }
 
+        // 중복 출석 확인
+        const [existingAttendance] = await db.execute(
+            'SELECT status FROM attendance WHERE session_id = ? AND student_id = ?',
+            [sessionId, studentId]
+        );
+
+        if (existingAttendance.length > 0 && existingAttendance[0].status !== 'absent') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 출석 처리된 학생입니다.'
+            });
+        }
+
         // 출석 처리 (지각 여부 판단은 별도 로직 필요)
         await db.execute(
             `UPDATE attendance SET status = 'present', checked_at = NOW() WHERE session_id = ? AND student_id = ?`,

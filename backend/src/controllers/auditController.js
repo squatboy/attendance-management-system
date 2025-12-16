@@ -54,15 +54,27 @@ exports.getAuditLogs = async (req, res) => {
         const totalPages = Math.ceil(total / limitNum);
 
         // 로그 데이터 포맷팅
-        const formattedLogs = logs.map(log => ({
-            id: log.id,
-            user_name: log.user_name || '(삭제된 사용자)',
-            student_id: log.student_id || '-',
-            action: log.action,
-            details: log.new_values ? JSON.stringify(JSON.parse(log.new_values), null, 2) : '-',
-            ip_address: log.ip_address || '-',
-            created_at: log.created_at
-        }));
+        const formattedLogs = logs.map(log => {
+            let details = '-';
+            if (log.new_values) {
+                try {
+                    const parsedData = typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values;
+                    details = JSON.stringify(parsedData, null, 2);
+                } catch (e) {
+                    details = log.new_values;
+                }
+            }
+
+            return {
+                id: log.id,
+                user_name: log.user_name || '(삭제된 사용자)',
+                student_id: log.student_id || '-',
+                action: log.action,
+                details: details,
+                ip_address: log.ip_address || '-',
+                created_at: log.created_at
+            };
+        });
 
         res.json({
             success: true,

@@ -264,3 +264,11 @@ CREATE TABLE audit_logs (
     INDEX idx_entity (entity_type, entity_id),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 19. 시스템 설정 테이블
+CREATE TABLE settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL COMMENT '설정 키',
+    setting_value VARCHAR(255) NOT NULL COMMENT '설정 값',
+    description VARCHAR(255) COMMENT '설정 설명',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

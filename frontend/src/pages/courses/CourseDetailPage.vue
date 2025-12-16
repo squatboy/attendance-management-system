@@ -95,22 +95,43 @@
                 :key="session.id"
                 class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
               >
-                <div>
-                  <p class="font-medium text-gray-900">
-                    {{ formatDate(session.session_date) }} {{ session.period }}교시
-                  </p>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium text-gray-900">
+                      {{ formatDate(session.session_date) }} {{ session.period }}교시
+                    </p>
+                    <span 
+                      class="badge"
+                      :class="session.status === 'active' ? 'badge-success' : 'badge-gray'"
+                    >
+                      {{ session.status === 'active' ? '진행 중' : '종료' }}
+                    </span>
+                  </div>
                   <div class="flex gap-4 mt-1 text-sm">
                     <span class="text-green-600">출석 {{ session.present_count }}</span>
                     <span class="text-yellow-600">지각 {{ session.late_count }}</span>
                     <span class="text-red-600">결석 {{ session.absent_count }}</span>
                   </div>
                 </div>
-                <router-link 
-                  :to="`/courses/${course.id}/attendance/${session.id}`"
-                  class="btn btn-secondary btn-sm"
-                >
-                  상세
-                </router-link>
+                <div class="flex gap-2">
+                  <!-- 학생: 진행 중인 출석만 코드 입력 가능 -->
+                  <router-link 
+                    v-if="authStore.isStudent && session.status === 'active' && session.attendance_type === 'code'"
+                    :to="`/attendance/check-in/${session.id}`"
+                    class="btn btn-primary btn-sm"
+                  >
+                    <i class="fa-solid fa-keyboard mr-1"></i>
+                    코드 입력
+                  </router-link>
+                  <!-- 교원/관리자: 상세 보기 -->
+                  <router-link 
+                    v-if="authStore.isInstructor || authStore.isAdmin"
+                    :to="`/courses/${course.id}/attendance/${session.id}`"
+                    class="btn btn-secondary btn-sm"
+                  >
+                    상세
+                  </router-link>
+                </div>
               </div>
             </div>
           </div>
