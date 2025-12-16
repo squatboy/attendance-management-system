@@ -506,3 +506,47 @@ exports.getCourseStats = async (req, res) => {
         });
     }
 };
+
+// 활성 출석 세션 조회 (학생용)
+exports.getActiveSession = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        const [sessions] = await db.execute(`
+            SELECT 
+                id,
+                course_id,
+                session_date,
+                period,
+                attendance_type,
+                attendance_code,
+                code_expires_at,
+                status,
+                created_at
+            FROM attendance_sessions
+            WHERE course_id = ? 
+            AND status = 'active'
+            AND DATE(session_date) = CURDATE()
+            LIMIT 1
+        `, [courseId]);
+
+        if (sessions.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '활성 출석 세션이 없습니다.'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: sessions[0]
+        });
+
+    } catch (error) {
+        console.error('활성 출석 세션 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '서버 오류가 발생했습니다.'
+        });
+    }
+};

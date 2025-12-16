@@ -20,16 +20,23 @@
       <div 
         v-for="session in sessions" 
         :key="session.id"
-        class="card p-5"
+        :class="[
+          'card p-5 transition-all',
+          session.status === 'active' && isStudentRole ? 'border-2 border-yellow-400 bg-yellow-50' : ''
+        ]"
       >
         <div class="flex items-center justify-between">
-          <div>
+          <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
               <span 
                 class="badge"
                 :class="session.status === 'active' ? 'badge-success' : 'badge-gray'"
               >
                 {{ session.status === 'active' ? '진행 중' : '종료' }}
+              </span>
+              <span v-if="session.status === 'active' && isStudentRole" class="badge badge-warning">
+                <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                현재 진행 중
               </span>
               <span class="badge badge-info">
                 {{ session.attendance_type === 'code' ? '코드 입력' : '호명' }}
@@ -53,13 +60,23 @@
               </span>
             </div>
           </div>
-          <router-link 
-            :to="`/courses/${courseId}/attendance/${session.id}`"
-            class="btn btn-primary"
-          >
-            <i class="fa-solid fa-eye mr-2"></i>
-            상세 보기
-          </router-link>
+          <div class="flex gap-2">
+            <router-link 
+              v-if="session.status === 'active' && isStudentRole"
+              :to="`/attendance/check-in/${session.id}`"
+              class="btn btn-warning"
+            >
+              <i class="fa-solid fa-clipboard-check mr-2"></i>
+              출석하기
+            </router-link>
+            <router-link 
+              :to="`/courses/${courseId}/attendance/${session.id}`"
+              class="btn btn-primary"
+            >
+              <i class="fa-solid fa-eye mr-2"></i>
+              상세 보기
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
@@ -69,13 +86,16 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const courseId = computed(() => route.params.courseId)
 
 const sessions = ref([])
 const isLoading = ref(true)
+const isStudentRole = computed(() => authStore.user?.role === 'student')
 
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('ko-KR', {

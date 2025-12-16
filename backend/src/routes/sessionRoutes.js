@@ -9,6 +9,9 @@ router.use(authenticate);
 // 강의별 출석 세션 목록 조회
 router.get('/course/:courseId', sessionController.getSessions);
 
+// 활성 출석 세션 조회 (학생용)
+router.get('/course/:courseId/active', sessionController.getActiveSession);
+
 // 세션 상세 조회
 router.get('/:sessionId', sessionController.getSession);
 
