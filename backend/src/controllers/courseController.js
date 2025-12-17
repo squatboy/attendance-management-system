@@ -236,50 +236,26 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, section, grade, department, instructorIds, instructorId, schedules } = req.body;
+        const { title, section, grade, department, instructorIds, schedules } = req.body;
 
         const connection = await db.getConnection();
         await connection.beginTransaction();
 
         try {
-            // 동적으로 업데이트할 필드 구성
-            const updates = [];
-            const params = [];
+            // 강의 수정
+            await connection.execute(
+                `UPDATE courses SET title = ?, section = ?, grade = ?, department = ? WHERE id = ?`,
+                [title, section, grade, department, id]
+            );
 
-            if (title !== undefined) {
-                updates.push('title = ?');
-                params.push(title);
-            }
-            if (section !== undefined) {
-                updates.push('section = ?');
-                params.push(section || null);
-            }
-            if (grade !== undefined) {
-                updates.push('grade = ?');
-                params.push(grade || 1);
-            }
-            if (department !== undefined) {
-                updates.push('department = ?');
-                params.push(department || '소프트웨어학과');
-            }
-
-            if (updates.length > 0) {
-                params.push(id);
-                await connection.execute(
-                    `UPDATE courses SET ${updates.join(', ')} WHERE id = ?`,
-                    params
-                );
-            }
-
-            // 기존 교원 연결 삭제 후 재생성 (배열 또는 단일 ID 모두 지원)
-            const instructors = instructorIds || (instructorId ? [instructorId] : null);
-            if (instructors) {
+            // 기존 교원 연결 삭제 후 재생성
+            if (instructorIds) {
                 await connection.execute('DELETE FROM course_instructors WHERE course_id = ?', [id]);
-                for (let i = 0; i < instructors.length; i++) {
+                for (let i = 0; i < instructorIds.length; i++) {
                     await connection.execute(
                         `INSERT INTO course_instructors (course_id, instructor_id, is_primary)
              VALUES (?, ?, ?)`,
-                        [id, instructors[i], i === 0]
+                        [id, instructorIds[i], i === 0]
                     );
                 }
             }
