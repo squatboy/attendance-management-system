@@ -259,3 +259,18 @@ CREATE TABLE settings (
     description VARCHAR(255) COMMENT '설정 설명',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 19. 메시지 테이블
+CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_id INT NOT NULL COMMENT '발신자 ID',
+    receiver_id INT NOT NULL COMMENT '수신자 ID',
+    content TEXT NOT NULL COMMENT '메시지 내용',
+    is_read BOOLEAN DEFAULT FALSE COMMENT '읽음 여부',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_receiver (receiver_id, created_at),
+    INDEX idx_sender (sender_id, created_at),
+    INDEX idx_conversation (sender_id, receiver_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

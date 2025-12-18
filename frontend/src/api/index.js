@@ -54,4 +54,42 @@ api.interceptors.response.use(
     }
 )
 
+// 메시지 API
+export const messageApi = {
+    // 메시지 전송
+    sendMessage: (receiverId, content) => {
+        return api.post('/messages', { receiver_id: receiverId, content })
+    },
+
+    // 대화 목록 조회
+    getConversations: () => {
+        return api.get('/messages/conversations')
+    },
+
+    // 특정 사용자와의 메시지 내역 조회
+    getMessages: (otherUserId, page = 1, limit = 50) => {
+        return api.get(`/messages/${otherUserId}`, { params: { page, limit } })
+    },
+
+    // 메시지 읽음 처리
+    markAsRead: (otherUserId) => {
+        return api.put(`/messages/${otherUserId}/read`)
+    },
+
+    // 읽지 않은 메시지 수 조회
+    getUnreadCount: () => {
+        return api.get('/messages/unread/count')
+    },
+
+    // 메시지 검색
+    searchMessages: (keyword) => {
+        return api.get('/messages/search/keyword', { params: { keyword } })
+    },
+
+    // 모든 사용자 조회 (메시지 전송 대상)
+    getAllUsers: () => {
+        return api.get('/messages/users/all')
+    }
+}
+
 export default api

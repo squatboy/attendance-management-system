@@ -255,5 +255,21 @@ FROM courses c
 CROSS JOIN users u 
 WHERE c.grade = 1 AND u.role = 'student' AND u.grade = 1;
 
+-- 샘플 메시지 데이터
+-- 교원(inst001, id=2) -> 학생(202021001, id=12)
+INSERT INTO messages (sender_id, receiver_id, content, is_read, created_at) VALUES
+(2, 12, '지난 주 과제 제출이 누락되었습니다. 확인 부탁드립니다.', TRUE, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(12, 2, '교수님, 과제 제출했습니다. 확인 부탁드립니다!', TRUE, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(2, 12, '확인했습니다. 잘 작성되었네요.', FALSE, DATE_SUB(NOW(), INTERVAL 12 HOUR));
+
+-- 학생(202021002, id=13) -> 교원(inst002, id=3)
+INSERT INTO messages (sender_id, receiver_id, content, is_read, created_at) VALUES
+(13, 3, '교수님, 다음 주 시험 범위가 어디까지인가요?', TRUE, DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+(3, 13, '3장부터 6장까지입니다.', FALSE, DATE_SUB(NOW(), INTERVAL 1 HOUR));
+
+-- 학생(202121001, id=17) -> 교원(inst003, id=4)
+INSERT INTO messages (sender_id, receiver_id, content, is_read, created_at) VALUES
+(17, 4, '교수님, 프로젝트 주제 변경 가능한가요?', FALSE, DATE_SUB(NOW(), INTERVAL 30 MINUTE));
+
 -- 완료 메시지
 SELECT '시드 데이터 입력이 완료되었습니다.' AS message;

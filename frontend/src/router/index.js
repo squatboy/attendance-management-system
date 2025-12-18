@@ -137,6 +137,18 @@ const routes = [
                 component: () => import('@/pages/notifications/NotificationListPage.vue')
             },
 
+            // 메시지
+            {
+                path: 'messages',
+                name: 'message-list',
+                component: () => import('@/pages/messages/MessageListPage.vue')
+            },
+            {
+                path: 'messages/:userId',
+                name: 'message-detail',
+                component: () => import('@/pages/messages/MessageDetailPage.vue')
+            },
+
             // 관리자 전용
             {
                 path: 'admin/users',

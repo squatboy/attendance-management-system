@@ -72,6 +72,20 @@
               </router-link>
             </li>
             
+            <li>
+              <router-link 
+                to="/messages" 
+                class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                :class="{ 'bg-primary-50 text-primary-600': $route.path.startsWith('/messages') }"
+              >
+                <i class="fa-solid fa-envelope w-5"></i>
+                <span>메시지</span>
+                <span v-if="unreadMessageCount > 0" class="ml-auto px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                  {{ unreadMessageCount }}
+                </span>
+              </router-link>
+            </li>
+            
             <!-- 관리자 메뉴 -->
             <template v-if="authStore.isAdmin">
               <li class="pt-4 mt-4 border-t border-gray-200">
@@ -208,12 +222,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
+import { messageApi } from '@/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 
 const sidebarOpen = ref(false)
+const unreadMessageCount = ref(0)
 
 const roleLabel = computed(() => {
   const roles = {
@@ -229,7 +245,23 @@ const handleLogout = async () => {
   router.push({ name: 'login' })
 }
 
+const loadUnreadMessageCount = async () => {
+  try {
+    const response = await messageApi.getUnreadCount()
+    unreadMessageCount.value = response.data.unreadCount
+  } catch (error) {
+    console.error('읽지 않은 메시지 수 조회 실패:', error)
+  }
+}
+
 onMounted(() => {
   notificationStore.fetchUnreadCount()
+  loadUnreadMessageCount()
+  
+  // 주기적으로 업데이트 (30초마다)
+  setInterval(() => {
+    notificationStore.fetchUnreadCount()
+    loadUnreadMessageCount()
+  }, 30000)
 })
 </script>
